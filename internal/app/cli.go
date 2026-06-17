@@ -24,6 +24,10 @@ func MainWithIO(ctx context.Context, args []string, stdout, stderr io.Writer, bu
 	case "doctor":
 		opts, err := parseDoctor(args[2:])
 		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				printDoctorUsage(stdout)
+				return exitOK
+			}
 			fmt.Fprintln(stderr, err)
 			return exitInvalidInput
 		}
@@ -31,6 +35,10 @@ func MainWithIO(ctx context.Context, args []string, stdout, stderr io.Writer, bu
 	case "run":
 		opts, err := parseRun(args[2:])
 		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				printRunUsage(stdout)
+				return exitOK
+			}
 			fmt.Fprintln(stderr, err)
 			return exitInvalidInput
 		}
@@ -58,6 +66,25 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  meeting-transcriber version")
 }
 
+func printDoctorUsage(w io.Writer) {
+	printUsage(w)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "doctor flags:")
+	fmt.Fprintln(w, "  --ffmpeg, --ffprobe, --whisper, --model, --output")
+	fmt.Fprintln(w, "  --notes-provider none|heuristic|ollama")
+	fmt.Fprintln(w, "  --ollama-url, --ollama-model, --allow-cloud-model")
+}
+
+func printRunUsage(w io.Writer) {
+	printUsage(w)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "run flags:")
+	fmt.Fprintln(w, "  --input <path> --model <model.bin> [--output <dir>]")
+	fmt.Fprintln(w, "  --recursive --language <code> --threads <n>")
+	fmt.Fprintln(w, "  --notes-provider none|heuristic|ollama")
+	fmt.Fprintln(w, "  --dry-run --clean-intermediate --keep-wav=false --fail-fast")
+}
+
 func addCommonFlags(fs *flag.FlagSet, opts *commonOptions) {
 	fs.StringVar(&opts.FFmpeg, "ffmpeg", "", "path to ffmpeg.exe")
 	fs.StringVar(&opts.FFprobe, "ffprobe", "", "path to ffprobe.exe")
@@ -83,6 +110,9 @@ func parseDoctor(args []string) (doctorOptions, error) {
 	fs.BoolVar(&opts.AllowCloudModel, "allow-cloud-model", false, "allow model names containing cloud")
 	if err := fs.Parse(args); err != nil {
 		return opts, err
+	}
+	if opts.ConfigPath != "" {
+		return opts, errors.New("--config is reserved for a future config-file release; use CLI flags or environment variables")
 	}
 	if err := validateNotesProvider(opts.NotesProvider); err != nil {
 		return opts, err
@@ -117,6 +147,9 @@ func parseRun(args []string) (runOptions, error) {
 	fs.BoolVar(&opts.VerboseTranscriptLog, "verbose-transcript-log", false, "allow transcript text in run.log")
 	if err := fs.Parse(args); err != nil {
 		return opts, err
+	}
+	if opts.ConfigPath != "" {
+		return opts, errors.New("--config is reserved for a future config-file release; use CLI flags or environment variables")
 	}
 	if opts.Input == "" {
 		return opts, errors.New("missing required --input")

@@ -26,25 +26,6 @@ func runTranscription(ctx context.Context, stdout, stderr io.Writer, build Build
 		return exitInvalidInput
 	}
 
-	result := discovery.Discover(discovery.ExplicitPaths{
-		FFmpeg:  opts.FFmpeg,
-		FFprobe: opts.FFprobe,
-		Whisper: opts.Whisper,
-	})
-	if len(result.Errors) > 0 {
-		for _, err := range result.Errors {
-			fmt.Fprintf(stderr, "ERROR: %s.\n", err)
-			if fix := discovery.MissingToolFix(err); fix != "" {
-				fmt.Fprintln(stderr, fix)
-			}
-		}
-		return exitMissingDependency
-	}
-	if err := readableFile(opts.Model); err != nil {
-		fmt.Fprintf(stderr, "ERROR: model file is not readable: %s\n", err)
-		return exitInvalidInput
-	}
-
 	outputRoot := opts.Output
 	if outputRoot == "" {
 		var err error
@@ -70,9 +51,33 @@ func runTranscription(ctx context.Context, stdout, stderr io.Writer, build Build
 	fmt.Fprintf(stdout, "Output root: %s\n", outputRoot)
 	if opts.DryRun {
 		for _, input := range inputs {
-			fmt.Fprintf(stdout, "DRY RUN: would process %s\n", input)
+			outputDir, err := media.UniqueOutputDir(outputRoot, input, time.Now())
+			if err != nil {
+				fmt.Fprintf(stdout, "DRY RUN: would process %s\n", input)
+				continue
+			}
+			fmt.Fprintf(stdout, "DRY RUN: would process %s -> %s\n", input, outputDir)
 		}
 		return exitOK
+	}
+
+	result := discovery.Discover(discovery.ExplicitPaths{
+		FFmpeg:  opts.FFmpeg,
+		FFprobe: opts.FFprobe,
+		Whisper: opts.Whisper,
+	})
+	if len(result.Errors) > 0 {
+		for _, err := range result.Errors {
+			fmt.Fprintf(stderr, "ERROR: %s.\n", err)
+			if fix := discovery.MissingToolFix(err); fix != "" {
+				fmt.Fprintln(stderr, fix)
+			}
+		}
+		return exitMissingDependency
+	}
+	if err := readableFile(opts.Model); err != nil {
+		fmt.Fprintf(stderr, "ERROR: model file is not readable: %s\n", err)
+		return exitInvalidInput
 	}
 	if err := os.MkdirAll(outputRoot, 0o755); err != nil {
 		fmt.Fprintf(stderr, "ERROR: cannot create output directory: %s\n", err)
