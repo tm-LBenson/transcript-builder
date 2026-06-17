@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -164,7 +166,23 @@ func indent(s, prefix string) string {
 func pingOllama(ctx context.Context, endpoint string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	client := notes.OllamaClient{}
-	_, err := client.Generate(ctx, notes.OllamaOptions{URL: endpoint, Model: "doctor-local-check"}, "doctor connectivity check")
-	return err
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return err
+	}
+	parsed.Path = "/api/tags"
+	parsed.RawQuery = ""
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	return nil
 }

@@ -1,0 +1,14 @@
+# Build outputs
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Local generated media/transcription outputs
+_transcribed/
+tools/
+models/
+
+# Go test/build artifacts
+*.test
+coverage.out

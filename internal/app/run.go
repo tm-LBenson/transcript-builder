@@ -147,6 +147,10 @@ func processOne(ctx context.Context, stdout io.Writer, input, outputRoot string,
 		NotesProvider:  opts.NotesProvider,
 		Status:         "running",
 	}
+	m.FFmpegVersion = firstLines(commandOutput(ctx, tools.FFmpeg, "-version"), 1)
+	if help, err := transcribe.Help(ctx, tools.Whisper); err == nil {
+		m.WhisperVersionOrHelp = firstLines(help, 4)
+	}
 	_ = manifest.Write(manifestPath, m)
 	defer func() {
 		if m.Status == "running" {
@@ -237,7 +241,7 @@ func processOne(ctx context.Context, stdout io.Writer, input, outputRoot string,
 	}
 	logger.Printf("notes written: %s", notesPath)
 
-	if opts.CleanIntermediate {
+	if opts.CleanIntermediate || !opts.KeepWAV {
 		logger.Section("cleanup")
 		if err := os.Remove(audioPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			m.Errors = append(m.Errors, "cleanup audio.wav: "+err.Error())

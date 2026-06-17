@@ -123,10 +123,20 @@ func executiveSummary(segments []string) string {
 	return "Candidate summary: " + summary
 }
 
-var sentenceSplit = regexp.MustCompile(`[.!?\n\r]+`)
-
 func splitSegments(transcript string) []string {
-	raw := sentenceSplit.Split(transcript, -1)
+	var raw []string
+	var b strings.Builder
+	for _, r := range transcript {
+		b.WriteRune(r)
+		if r == '.' || r == '!' || r == '?' || r == '\n' || r == '\r' {
+			raw = append(raw, b.String())
+			b.Reset()
+		}
+	}
+	if b.Len() > 0 {
+		raw = append(raw, b.String())
+	}
+
 	segments := make([]string, 0, len(raw))
 	for _, part := range raw {
 		part = normalizeSpace(part)
@@ -160,7 +170,8 @@ func findQuestions(segments []string) []string {
 	var out []string
 	for _, segment := range segments {
 		lower := strings.ToLower(segment)
-		if strings.Contains(lower, "question is") ||
+		if strings.HasSuffix(strings.TrimSpace(segment), "?") ||
+			strings.Contains(lower, "question is") ||
 			strings.Contains(lower, "need to find out") ||
 			strings.Contains(lower, "not sure") {
 			out = appendUniqueLimited(out, cleanBullet(segment), 8)
