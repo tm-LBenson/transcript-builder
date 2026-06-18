@@ -9,7 +9,7 @@ const (
 	exitMissingDependency = 3
 
 	defaultLanguage      = "en"
-	defaultNotesProvider = "heuristic"
+	defaultNotesProvider = "none"
 	defaultOllamaURL     = "http://127.0.0.1:11434/api/generate"
 )
 

@@ -1,6 +1,6 @@
 # meeting-transcriber
 
-A Windows-first Go CLI for local meeting transcription. It scans a media file or folder, extracts clean WAV audio with FFmpeg, runs local Whisper transcription through `whisper.cpp`, and writes a transcript, draft meeting notes, a manifest, and a local run log.
+A Windows-first Go CLI for local meeting transcription. It scans a media file or folder, extracts clean WAV audio with FFmpeg, runs local Whisper transcription through `whisper.cpp`, and writes transcript files, a manifest, and a local run log.
 
 The app is privacy-first:
 
@@ -59,13 +59,16 @@ Fix: install ffmpeg.exe and add it to PATH, or pass --ffmpeg "C:\path\to\ffmpeg.
 
 ## Transcribe
 
+PowerShell backticks are easy to break if any trailing spaces sneak in. The least fussy option is one line:
+
 ```powershell
-.\meeting-transcriber.exe run `
-  --input "D:\Meetings\Incoming\2026-06-17-customer-call" `
-  --output "D:\Meetings\Processed" `
-  --model ".\models\ggml-small.en.bin" `
-  --language en `
-  --notes-provider heuristic
+.\meeting-transcriber.exe run --input "D:\Meetings\Incoming\2026-06-17-customer-call\meeting.mp4" --output "D:\Meetings\Processed" --model ".\models\ggml-small.en.bin" --language en
+```
+
+Or use the wrapper script, which defaults to `D:\Meetings\Processed`, `.\models\ggml-small.en.bin`, and transcript-only output:
+
+```powershell
+.\transcribe.ps1 "D:\Meetings\Incoming\2026-06-17-customer-call\meeting.mp4"
 ```
 
 Supported inputs:
@@ -94,16 +97,16 @@ D:\Meetings\Processed\meeting_20260617_143022_a1b2c3d4\
   transcript.txt
   transcript.srt
   transcript.json
-  meeting_notes.md
+  meeting_notes.md       # minimal placeholder unless notes are explicitly enabled
 ```
 
 `audio.wav` is kept by default for review and troubleshooting. Use `--clean-intermediate` to remove it after a successful transcription. The original recording is never deleted.
 
 ## Notes Providers
 
-`heuristic` is the default. It is local, deterministic, offline, and labels decisions, action items, questions, and dates as candidates where appropriate.
+`none` is the default. It writes a minimal `meeting_notes.md` saying notes generation was disabled, leaving `transcript.txt` ready for review or manual export.
 
-`none` writes a minimal meeting notes file saying notes generation was disabled.
+`heuristic` is local, deterministic, offline, and labels decisions, action items, questions, and dates as candidates where appropriate. It is intentionally rough.
 
 `ollama` is optional and must be selected explicitly:
 
@@ -142,6 +145,7 @@ All transcripts and notes require human review before sharing or using as an off
 --threads <n>                Default: runtime.NumCPU()-1, minimum 1.
 --recursive                  Scan subdirectories.
 --dry-run                    Print planned work without processing files.
+--notes-provider <provider>  none | heuristic | ollama. Default: none.
 --clean-intermediate         Delete audio.wav after successful transcription.
 --fail-fast                  Stop a batch after the first failed file.
 --verbose-transcript-log     Allow transcript text in run.log.

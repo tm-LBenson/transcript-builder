@@ -52,8 +52,8 @@ func TestRunWithFakeTools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(rawNotes), "Candidate: We decided") {
-		t.Fatalf("heuristic notes did not include fake transcript decision:\n%s", rawNotes)
+	if !strings.Contains(string(rawNotes), "Notes generation was disabled") {
+		t.Fatalf("default run should keep notes disabled:\n%s", rawNotes)
 	}
 }
 
